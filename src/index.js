@@ -1,12 +1,178 @@
-module.exports = function createPool(Constructor) {
-    var pool = [];
+var isFunction = require("is_function"),
+    defineProperty = require("define_property");
 
-    return {
-        create: function() {
-            return pool.length !== 0 ? pool.pop() : new Constructor();
-        },
-        destroy: function(instance) {
-            pool[pool.length] = instance;
+
+var DEFAULT_POOL_SIZE = 10,
+    descriptor = {
+        configurable: false,
+        enumerable: false,
+        writable: false,
+        value: null
+    };
+
+function property(object, name, value) {
+    descriptor.value = value;
+    defineProperty(object, name, descriptor);
+    descriptor.value = null;
+}
+
+function createPooler(Constructor) {
+    switch (Constructor.length) {
+        case 0:
+            return createNoArgumentPooler(Constructor);
+        case 1:
+            return createOneArgumentPooler(Constructor);
+        case 2:
+            return createTwoArgumentsPooler(Constructor);
+        case 3:
+            return createThreeArgumentsPooler(Constructor);
+        case 4:
+            return createFourArgumentsPooler(Constructor);
+        case 5:
+            return createFiveArgumentsPooler(Constructor);
+        default:
+            return createApplyPooler(Constructor);
+    }
+}
+
+function createNoArgumentPooler(Constructor) {
+    return function pooler() {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            return instance;
+        } else {
+            return new Constructor();
         }
     };
+}
+
+function createOneArgumentPooler(Constructor) {
+    return function pooler(a0) {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            Constructor.call(instance, a0);
+            return instance;
+        } else {
+            return new Constructor(a0);
+        }
+    };
+}
+
+function createTwoArgumentsPooler(Constructor) {
+    return function pooler(a0, a1) {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            Constructor.call(instance, a0, a1);
+            return instance;
+        } else {
+            return new Constructor(a0, a1);
+        }
+    };
+}
+
+function createThreeArgumentsPooler(Constructor) {
+    return function pooler(a0, a1, a2) {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            Constructor.call(instance, a0, a1, a2);
+            return instance;
+        } else {
+            return new Constructor(a0, a1, a2);
+        }
+    };
+}
+
+function createFourArgumentsPooler(Constructor) {
+    return function pooler(a0, a1, a2, a3) {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            Constructor.call(instance, a0, a1, a2, a3);
+            return instance;
+        } else {
+            return new Constructor(a0, a1, a2, a3);
+        }
+    };
+}
+
+function createFiveArgumentsPooler(Constructor) {
+    return function pooler(a0, a1, a2, a3, a4) {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            Constructor.call(instance, a0, a1, a2, a3, a4);
+            return instance;
+        } else {
+            return new Constructor(a0, a1, a2, a3, a4);
+        }
+    };
+}
+
+function createApplyConstructor(Constructor) {
+    function F(args) {
+        return Constructor.apply(this, args);
+    }
+    F.prototype = Constructor.prototype;
+
+    return function applyConstructor(args) {
+        return new F(args);
+    };
+}
+
+function createApplyPooler(Constructor) {
+    var applyConstructor = createApplyConstructor(Constructor);
+
+    return function pooler() {
+        var instancePool = Constructor.instancePool,
+            instance;
+
+        if (instancePool.length) {
+            instance = instancePool.pop();
+            Constructor.apply(instance, arguments);
+            return instance;
+        } else {
+            return applyConstructor(arguments);
+        }
+    };
+}
+
+function createReleaser(Constructor) {
+    return function releaser(instance) {
+        var instancePool = Constructor.instancePool;
+
+        if (isFunction(instance.destructor)) {
+            instance.destructor();
+        }
+        if (instancePool.length < Constructor.poolSize) {
+            instancePool[instancePool.length] = instance;
+        }
+    };
+}
+
+module.exports = function createPool(Constructor) {
+    property(Constructor, "instancePool", []);
+    property(Constructor, "getPooled", createPooler(Constructor));
+    property(Constructor, "release", createReleaser(Constructor));
+
+    if (!Constructor.poolSize) {
+        property(Constructor, "poolSize", DEFAULT_POOL_SIZE);
+    }
+
+    return Constructor;
 };
