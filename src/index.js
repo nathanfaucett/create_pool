@@ -1,16 +1,16 @@
 var isFunction = require("is_function"),
+    isNumber = require("is_number"),
     defineProperty = require("define_property");
 
 
-var DEFAULT_POOL_SIZE = 10,
-    descriptor = {
-        configurable: false,
-        enumerable: false,
-        writable: false,
-        value: null
-    };
+var descriptor = {
+    configurable: false,
+    enumerable: false,
+    writable: false,
+    value: null
+};
 
-function property(object, name, value) {
+function addProperty(object, name, value) {
     descriptor.value = value;
     defineProperty(object, name, descriptor);
     descriptor.value = null;
@@ -159,19 +159,19 @@ function createReleaser(Constructor) {
         if (isFunction(instance.destructor)) {
             instance.destructor();
         }
-        if (instancePool.length < Constructor.poolSize) {
+        if (Constructor.poolSize === -1 || instancePool.length < Constructor.poolSize) {
             instancePool[instancePool.length] = instance;
         }
     };
 }
 
-module.exports = function createPool(Constructor) {
-    property(Constructor, "instancePool", []);
-    property(Constructor, "getPooled", createPooler(Constructor));
-    property(Constructor, "release", createReleaser(Constructor));
+module.exports = function createPool(Constructor, poolSize) {
+    addProperty(Constructor, "instancePool", []);
+    addProperty(Constructor, "getPooled", createPooler(Constructor));
+    addProperty(Constructor, "release", createReleaser(Constructor));
 
     if (!Constructor.poolSize) {
-        property(Constructor, "poolSize", DEFAULT_POOL_SIZE);
+        Constructor.poolSize = isNumber(poolSize) ? (poolSize < -1 ? -1 : poolSize) : -1;
     }
 
     return Constructor;
