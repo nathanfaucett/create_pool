@@ -15,13 +15,13 @@ module.exports = createPool;
 
 
 function createPool(Constructor, poolSize) {
+
     addProperty(Constructor, "instancePool", []);
     addProperty(Constructor, "getPooled", createPooler(Constructor));
     addProperty(Constructor, "release", createReleaser(Constructor));
 
-    if (!Constructor.poolSize) {
-        Constructor.poolSize = isNumber(poolSize) ? (poolSize < -1 ? -1 : poolSize) : -1;
-    }
+    poolSize = poolSize || Constructor.poolSize;
+    Constructor.poolSize = isNumber(poolSize) ? (poolSize < -1 ? -1 : poolSize) : -1;
 
     return Constructor;
 }
