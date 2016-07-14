@@ -1,6 +1,6 @@
-var isFunction = require("is_function"),
-    isNumber = require("is_number"),
-    defineProperty = require("define_property");
+var isFunction = require("@nathanfaucett/is_function"),
+    isNumber = require("@nathanfaucett/is_number"),
+    defineProperty = require("@nathanfaucett/define_property");
 
 
 var descriptor = {
